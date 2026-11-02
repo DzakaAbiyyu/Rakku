@@ -73,11 +73,11 @@ export default function Navbar() {
                         </li>
                         <li>
                             <a
-                                href="#rumus"
+                                href="#about"
                                 onClick={() => setIsOpen(false)}
                                 className="block py-2 px-3 text-white rounded hover:text-[#F5D010] md:p-0 transition-colors"
                             >
-                                Rumus Keterisian
+                                Tentang
                             </a>
                         </li>
                     </ul>
