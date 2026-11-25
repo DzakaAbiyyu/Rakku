@@ -1,18 +1,17 @@
-import Image from "next/image";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import HowItWorks from "./components/HowItWorks";
-import Demo from "./components/DemoSection";
-import About from "./components/AboutSection";
+import AboutSection from "./components/AboutSection";
 
 export default function Home() {
   return (
-    <div>
-      <Navbar />
-      <Hero />
-      <HowItWorks />
-      <About />
-      <Demo />
+    <div className="min-h-full flex flex-col">
+      <Navbar variant="landing" />
+      <main className="flex-1">
+        <Hero />
+        <HowItWorks />
+        <AboutSection />
+      </main>
     </div>
   );
 }

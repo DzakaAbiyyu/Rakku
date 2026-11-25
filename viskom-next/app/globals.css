@@ -1,26 +1,98 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+:root,
+[data-theme="light"] {
+  --bg-canvas: #F5F1EA;
+  --bg-surface: #FDFBF7;
+  --bg-muted: #EAE3D7;
+  --fg-primary: #1C1917;
+  --fg-secondary: #4A433C;
+  --border-subtle: #D6CEC2;
+  --border-strong: #736A60;
+  --accent: #B83B0A;
+  --accent-hover: #9A3007;
+  --accent-fg: #FFFFFF;
+  --accent-text: #B83B0A;
+  --status-ok: #166534;
+  --status-ok-bg: #E6F4EA;
+  --status-alert: #B91C1C;
+  --status-alert-bg: #FCE8E6;
+  --viewport-bg: #181512;
+}
+
+[data-theme="dark"] {
+  --bg-canvas: #141210;
+  --bg-surface: #1E1B18;
+  --bg-muted: #292521;
+  --fg-primary: #F5F1EA;
+  --fg-secondary: #C2B9AE;
+  --border-subtle: #38322C;
+  --border-strong: #8C8277;
+  --accent: #F97316;
+  --accent-hover: #FB923C;
+  --accent-fg: #141210;
+  --accent-text: #FB923C;
+  --status-ok: #4ADE80;
+  --status-ok-bg: #132A1C;
+  --status-alert: #F87171;
+  --status-alert-bg: #311515;
+  --viewport-bg: #0D0B0A;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg-canvas);
+  --color-foreground: var(--fg-primary);
+  --font-sans: var(--font-jakarta);
+  --font-mono: var(--font-plex-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-padding-top: 4.75rem;
+  overflow-x: clip;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-canvas);
+  color: var(--fg-primary);
+  font-family: var(--font-jakarta), system-ui, -apple-system, sans-serif;
+  overflow-x: clip;
+}
+
+.font-tabular {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Corner sight-marks motif for optical inspection frames */
+.sight-frame {
+  position: relative;
+}
+
+.sight-frame::before,
+.sight-frame::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.sight-frame::before {
+  top: 8px;
+  left: 8px;
+  border-top: 2px solid var(--accent-text);
+  border-left: 2px solid var(--accent-text);
+}
+
+.sight-frame::after {
+  bottom: 8px;
+  right: 8px;
+  border-bottom: 2px solid var(--accent-text);
+  border-right: 2px solid var(--accent-text);
 }
