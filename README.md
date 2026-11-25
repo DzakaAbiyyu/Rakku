@@ -16,31 +16,34 @@ Proyek ini dibuat sebagai tugas akhir mata kuliah Visi Komputer.
 ## Arsitektur
 
 ```
-rakku/
-├── app/                  # Frontend (Next.js, App Router)
-│   └── components/       # Navbar, Hero, HowItWorks, DemoSection, AboutSection
+Rakku/
+├── viskom-next/          # Frontend (Next.js, App Router)
+│   └── app/components/   # Navbar, Hero, HowItWorks, DemoSection, AboutSection
 └── viskom-backend/
-    └── main.py           # Backend (FastAPI + Ultralytics YOLO)
+    ├── preprocess.py     # Pipeline pemrosesan citra (EXIF, resize, Bilateral, Auto-CLAHE)
+    ├── main.py           # Backend (FastAPI + Ultralytics YOLO11s)
+    └── requirements.txt  # Dependensi Python backend
 ```
 
-Backend mengirim **koordinat** (box produk, celah, baris), bukan gambar beranotasi. Overlay digambar di frontend dengan SVG, sehingga toggle layer dan slider threshold responsif. Flag restock dihitung di frontend dari `fill_percent < threshold`.
+Backend mengirim **koordinat** (box produk, celah, baris) beserta metadata (dan opsional preview) hasil pemrosesan citra. Overlay digambar di frontend dengan SVG, sehingga toggle layer, toggle *Before/After* preprocessing, dan slider threshold tetap responsif. Flag restock dihitung di frontend dari `fill_percent < threshold`.
 
 ## Alur Pemrosesan
 
-1. Input citra: unggah foto rak
-2. Deteksi produk: inferensi YOLO11 (1 kelas)
-3. Klaster baris: produk dikelompokkan berdasarkan posisi vertikal
-4. Hitung celah: jarak antar produk yang lebih besar dari 1x lebar median produk dianggap celah
-5. Estimasi rasio: `produk / (produk + slot kosong) x 100%` per baris
-6. Output: overlay anotasi, persentase keterisian, dan flag restock
+1. **Input citra**: unggah foto rak + koreksi orientasi EXIF otomatis (`ImageOps.exif_transpose`)
+2. **Perbaikan citra (`preprocess.py`)**: resize aman `INTER_AREA` (`max_side=1280`) -> **Bilateral Filter** (`d=5, sigma=40`) -> **Auto-CLAHE** pada channel `L` ruang warna LAB (`clipLimit=1.5`, aktif otomatis saat `gray_mean < 65`)
+3. **Deteksi produk**: inferensi `YOLO11s` @ `imgsz=960` (`conf=0.25`, `iou=0.5`, 1 kelas), lalu rescaling koordinat ke ukuran citra asli
+4. **Klaster baris**: produk dikelompokkan berdasarkan posisi vertikal + penggabungan sub-baris berdekatan
+5. **Hitung celah**: interval overlap digabung, jarak antar produk > `1x` lebar median produk dianggap celah
+6. **Estimasi rasio**: `produk / (produk + slot kosong) x 100%` per baris
+7. **Output**: overlay anotasi, preview before/after preprocessing, persentase keterisian, dan flag restock
 
 ## Teknologi
 
 | Bagian | Teknologi |
 |---|---|
 | Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4 |
-| Backend | FastAPI, Uvicorn, Pillow, NumPy |
-| Model | Ultralytics YOLO11 (dilatih pada SKU-110K) |
+| Backend | FastAPI, Uvicorn, OpenCV (`opencv-python-headless`), Pillow, NumPy |
+| Model | Ultralytics YOLO11s @ 960px (dilatih pada SKU-110K, `mAP@50 = 92.65%`) |
 
 ## Menjalankan Secara Lokal
 
@@ -48,7 +51,7 @@ Backend mengirim **koordinat** (box produk, celah, baris), bukan gambar beranota
 
 - Node.js 20 atau lebih baru
 - Python 3.10 atau lebih baru
-- File bobot model `best_sku110k_yolo11n2.pt`
+- File bobot model `best_sku110k_yolo11s_960.pt`
 
 ### 1. Backend
 
@@ -60,10 +63,10 @@ python -m venv venv
 venv\Scripts\activate        # Windows
 # source venv/bin/activate   # macOS / Linux
 
-python -m pip install fastapi "uvicorn[standard]" python-multipart pillow numpy ultralytics
+python -m pip install -r requirements.txt
 ```
 
-Letakkan file `best_sku110k_yolo11n2.pt` di folder `viskom-backend/` (sejajar dengan `main.py`), lalu jalankan:
+Letakkan file `best_sku110k_yolo11s_960.pt` di folder `viskom-backend/` (sejajar dengan `main.py`), lalu jalankan:
 
 ```bash
 python -m uvicorn main:app --reload
@@ -73,14 +76,15 @@ Backend berjalan di `http://127.0.0.1:8000`. Dokumentasi interaktif (Swagger) te
 
 ### 2. Frontend
 
-Dari root repo:
+Dari folder `viskom-next/`:
 
 ```bash
+cd viskom-next
 npm install
 npm run dev
 ```
 
-Buka `http://localhost:3000`, masuk ke bagian **Demo Interaktif**, unggah foto rak, lalu klik **Jalankan Deteksi AI**.
+Buka `http://localhost:3000`, masuk ke bagian **Demo Interaktif**, unggah foto rak, atur opsi pemrosesan citra bila perlu, lalu klik **Jalankan Deteksi AI**.
 
 Secara default frontend memanggil `http://localhost:8000`. Untuk mengubahnya, buat file `.env.local`:
 
@@ -92,19 +96,24 @@ NEXT_PUBLIC_API_URL=http://alamat-backend-anda
 
 ### `GET /`
 
-Pengecekan status server.
+Pengecekan status server dan nama model aktif.
 
 ### `POST /api/analyze`
 
 Menganalisis foto rak.
 
-- **Body**: `multipart/form-data` dengan field `file` (gambar JPG, PNG, atau WEBP)
+- **Body** (`multipart/form-data`):
+  - `file` *(wajib)*: gambar JPG, PNG, atau WEBP
+  - `use_denoise` *(opsional, default `true`)*: aktifkan Bilateral Filter
+  - `clahe_mode` *(opsional, default `auto`)*: `"auto"` | `"on"` | `"off"`
+  - `return_preprocessed` *(opsional, default `false`)*: sertakan gambar hasil preprocessing dalam base64 data URL
 - **Respons** (JSON):
 
 ```json
 {
-  "image_width": 960,
-  "image_height": 736,
+  "model": "YOLO11s-SKU110K@960",
+  "image_width": 2448,
+  "image_height": 3264,
   "total_products": 140,
   "total_fill": 78.5,
   "rows": [
@@ -117,28 +126,41 @@ Menganalisis foto rak.
     }
   ],
   "boxes": [[x1, y1, x2, y2]],
-  "gaps": [{ "row": 1, "bbox": [x1, y1, x2, y2] }]
+  "gaps": [{ "row": 1, "bbox": [x1, y1, x2, y2] }],
+  "preprocessing": {
+    "orig_size": [2448, 3264],
+    "proc_size": [960, 1280],
+    "resized": true,
+    "denoise_applied": true,
+    "clahe_mode": "auto",
+    "clahe_applied": false,
+    "mean_before": 131.4,
+    "mean_after": 131.2,
+    "preprocess_ms": 42.5
+  }
 }
 ```
 
-Semua koordinat dalam piksel pada gambar asli. Kesalahan dikembalikan sebagai `400` (file bukan gambar atau tidak valid).
+Semua koordinat dalam piksel pada gambar asli (sesudah koreksi EXIF). Kesalahan dikembalikan sebagai `400` (file bukan gambar atau tidak valid).
 
 ## Konfigurasi dan Penyetelan
 
-Parameter ada di bagian atas `viskom-backend/main.py`:
+Parameter ada di bagian atas `viskom-backend/main.py` dan `viskom-backend/preprocess.py`:
 
 | Parameter | Fungsi |
 |---|---|
-| `CONF` | Ambang kepercayaan deteksi. Lebih rendah menangkap lebih banyak produk, tapi lebih banyak duplikat |
-| `IOU` | Ambang NMS untuk membuang box yang tumpang tindih |
-| `MAX_DET` | Jumlah deteksi maksimum per gambar |
-| `ROW_TOLERANCE` | Jarak vertikal (kali tinggi median produk) untuk memisahkan baris |
-| `GAP_FACTOR` | Celah dihitung jika lebih lebar dari faktor ini kali lebar median produk |
+| `IMGSZ` | Resolusi inferensi YOLO11s (`960`) |
+| `CONF` | Ambang kepercayaan deteksi (`0.25`, bias paling seimbang) |
+| `IOU` | Ambang NMS untuk membuang box yang tumpang tindih (`0.5`) |
+| `MAX_DET` | Jumlah deteksi maksimum per gambar (`1000`) |
+| `ROW_TOLERANCE` | Jarak vertikal (kali tinggi median produk) untuk memisahkan baris (`0.65`) |
+| `ROW_MERGE_TOL` | Jarak vertikal untuk menggabungkan sub-baris berdekatan (`0.75`) |
+| `GAP_FACTOR` | Celah dihitung jika lebih lebar dari faktor ini kali lebar median produk (`1.0`) |
+| `DEFAULT_DARK_THRESHOLD` | Batas rata-rata intensitas grayscale (`65.0`) untuk mengaktifkan Auto-CLAHE |
 
 ## Batasan
 
-- Pengelompokan baris paling akurat pada foto rak yang diambil lurus dari depan; foto dengan perspektif kuat bisa membuat baris tidak terpisah dengan benar.
-- Tahap perbaikan citra (resize, CLAHE, bilateral denoise) dan SAHI belum diimplementasikan di backend.
+- Pengelompokan baris paling akurat pada foto rak yang diambil lurus dari depan; koreksi perspektif (Homography 4 titik) dan SAHI belum diintegrasikan ke UI web.
 - Model dilatih dengan 1 kelas, sehingga sistem tidak membedakan jenis produk.
 
 ## Lisensi dan Atribusi

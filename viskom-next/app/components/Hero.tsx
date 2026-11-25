@@ -51,10 +51,10 @@ export default function Hero() {
                     {/* Card 1 */}
                     <div className="bg-[#F2F4F7] border border-slate-200/80 rounded-xl p-5 sm:p-6 flex flex-col items-center justify-center">
                         <span className="text-2xl sm:text-3xl font-extrabold text-[#0B1354] mb-1">
-                            98.4%
+                            92.7%
                         </span>
                         <span className="text-xs sm:text-sm font-medium text-slate-600">
-                            Akurasi Deteksi Produk
+                            mAP@50 Deteksi Produk
                         </span>
                     </div>
 
@@ -71,10 +71,10 @@ export default function Hero() {
                     {/* Card 3 */}
                     <div className="bg-[#F2F4F7] border border-slate-200/80 rounded-xl p-5 sm:p-6 flex flex-col items-center justify-center">
                         <span className="text-2xl sm:text-3xl font-extrabold text-[#0B1354] mb-1">
-                            YOLO11 + SAHI
+                            OpenCV + YOLO11s
                         </span>
                         <span className="text-xs sm:text-sm font-medium text-slate-600">
-                            Arsitektur Computer Vision
+                            Pipeline Citra &amp; Deteksi
                         </span>
                     </div>
                 </div>

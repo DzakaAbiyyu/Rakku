@@ -2,9 +2,9 @@ import React from "react";
 
 export default function HowItWorks() {
     const steps = [
-        { num: "01", title: "Input Citra", desc: "Akuisisi / upload foto rak ritel." },
-        { num: "02", title: "Perbaikan Citra", desc: "Resize, CLAHE & bilateral denoise." },
-        { num: "03", title: "Deteksi Produk", desc: "Inference model YOLO11 (1 class)." },
+        { num: "01", title: "Input Citra", desc: "Akuisisi / upload foto rak ritel + koreksi orientasi EXIF." },
+        { num: "02", title: "Perbaikan Citra", desc: "Resize (INTER_AREA), Bilateral denoise & Auto-CLAHE (LAB)." },
+        { num: "03", title: "Deteksi Produk", desc: "Inference model YOLO11s @ 960px (1 class)." },
         { num: "04", title: "Klaster Baris", desc: "Pengelompokan objek per baris rak." },
         { num: "05", title: "Hitung Celah", desc: "Deteksi gap > 1× lebar median produk." },
         { num: "06", title: "Estimasi Rasio", desc: "Kalkulasi % keterisian per baris." },
